@@ -2,7 +2,7 @@ from torch import nn
 from torch.nn import functional as F
 import torch
 
-from configuration_stockllama import StockLlamaConfig
+from configuration_Climllama import ClimLlamaConfig
 
 from transformers.models.llama.modeling_llama import LlamaPreTrainedModel
 from transformers.models.llama.modeling_llama import LlamaModel
@@ -14,17 +14,22 @@ import math
 from typing import Any, Dict, List, Optional, Tuple , Union
 
 class FloatEmbedding(nn.Module):
-    def __init__(self, vocab_size, hidden_size, padding_idx ,term_number):
+    def __init__(self, vocab_size, hidden_size, padding_idx, term_number):
         super(FloatEmbedding, self).__init__()
         self.term_number = term_number
-        self.int_part = nn.Embedding(vocab_size, hidden_size ,padding_idx)
-        self.float_part = nn.Embedding(10**term_number , hidden_size)
-        
-    def forward(self, input):
-        float_input = ((input - torch.floor(input)) * (10**self.term_number)).to(torch.long)
-        int_input = input.to(torch.long)
-        output = self.float_part(float_input) + self.int_part(int_input)
+        self.int_part = nn.Embedding(vocab_size, hidden_size, padding_idx)
+        self.float_part = nn.Embedding(10**term_number, hidden_size)
+        self.sign = nn.Embedding(2, hidden_size) 
 
+    def forward(self, input):
+        float_input = ((input - torch.floor(input)) * (10**self.term_number)).long()
+        int_input = input.long()
+        sign_input = (input >= 0).long() 
+        output = (
+            self.float_part(float_input) + 
+            self.int_part(int_input) + 
+            self.sign(sign_input)
+        )
         return output
     
 class ClimLlamaPreTrainedModel(LlamaPreTrainedModel):
